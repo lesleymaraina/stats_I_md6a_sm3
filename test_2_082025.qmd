@@ -90,7 +90,7 @@ $$
 ## Linear regression and inference
 <div style="font-size:0.7em">
 - inference is the process of using data from a sample to make conclusions about the underlying population or process that generated the data
-- `confidence intervals (CIs)` : 
+- `confidence intervals (CIs)`: 
   - provide a range of plausible values for value being estimated [i.e.: $\beta$]
   - e.x.: if a model provides an estimate with a 95% CI this means within the context of sampling - if we repeated the experiment many times, 95% of the resulting intervals would contain the true we're attempting to estimate [i.e.: $\beta$]
 - `p-values` :
