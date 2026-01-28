@@ -1,0 +1,558 @@
+---
+title: "Common Structure Behind Regression"
+author: "<br><br><span style='font-size:25px;'><strong>Lesley Chapman Hannah, Ph.D., M.S.</strong></span><br>College of Graduate Studies<br>Northeast Ohio Medical University"
+format:
+  revealjs:
+    chalkboard: true
+    theme: simple
+    slide-number: true
+    #incremental: true
+    code-fold: false
+execute:
+  echo: true
+  warning: false
+  message: false
+  error: true
+---
+
+## Regression Review
+ 
+- in biomedical research questions often involve understanding how biological or clinical variables relate to an outcome of interest [i.e.: treatment response]
+- substantial variability arises from a number of sources [i.e.: technical noise and unmeasured factors]
+- statistical models such as linear regression must simultaneously describe systematic effects while accounting for uncertainty
+- linear regression provides a concise framework that accomplishes this
+
+## Linear regression model Overview
+<div style="font-size:0.8em">
+Linear regression model
+
+$$
+Y=Xβ+ε,ε∼N(0,σ2)
+$$
+
+
+
+
+- $Xβ$ captures the explainable relationship between predictors X and outcome Y
+- β represents effect sizes (how much Y changes when X changes)
+- explained in more detail in a later slide
+</div>
+
+## Linear regression model Overview
+<div style="font-size:0.8em">
+ Linear regression model
+
+$$
+Y=Xβ+ε,ε∼N(0,σ2)
+$$
+
+Randomness and uncertainty
+
+$$
+ε∼N(0,σ2)
+$$
+
+- part of the model that accounts for noisiness in data
+- ε represents unobserved factors, measurement error, and randomness
+- distributional effect allows one to quantify uncertainty
+</div>
+
+## Linear regression model Overview
+<div style="font-size:0.8em">
+- Model can be written as a probability which helps one determine how likely different outcomes are
+
+$$
+Y∣X∼N(Xβ,σ2)
+$$
+
+- likelihood is a probability distribution as a function of the parameters not the data
+- measures how plausible the observed data are for different β values
+
+$$
+p(Y∣X,β, σ^2)
+$$
+</div>
+
+## Linear regression and sampling
+<div style="font-size:0.8em">
+- regression models how the observed outcomes Y arise from random draws from a population given the predictors X
+- Each observation is treated as a random draw from a Normal (Gaussian) distribution with mean $X_i$β and variance $σ^2$
+- Each observation is essentially a sample from a probability distribution:
+
+$$
+Yi​∣Xi​∼N(Xi​β,σ2)
+$$
+
+- β captures the systematic effect of predictors
+- $σ^2$ represents the inherent variability
+</div>
+
+## Linear regression and inference
+<div style="font-size:0.7em">
+- inference is the process of using data from a sample to make conclusions about the underlying population or process that generated the data
+- `confidence intervals (CIs)` : 
+  - provide a range of plausible values for value being estimated [i.e.: $\beta$]
+  - e.x.: if a model provides an estimate with a 95% CI this means within the context of sampling - if we repeated the experiment many times, 95% of the resulting intervals would contain the true we're attempting to estimate [i.e.: $\beta$]
+- `p-values` :
+  - test to compare observed values $\hat{\beta}$ to its expected distribution under a null hypothesis [i.e.:β=0]
+  - small p-value → evidence against the null hypothesis 
+  - large p-value → not enough evidence to reject the null hypothesis
+</div>
+
+
+## Linear regression and inference
+<div style="font-size:0.4em">
+| **Model**               | **Outcome Type**         | **Likelihood / Distribution**                                                                                          | **Inference (What we can test)**                                                                                                           |
+|-------------------------|-------------------------|----------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **Linear Regression**   | Continuous (Y)           | Gaussian                                                                     | t-tests <br> confidence intervals <br> F-tests for overall model <br> \\(\\beta_j\\) = expected change in \\(Y\\) per unit increase in \\(X_j\\)|
+| **Logistic Regression** | Binary \\(Y \\in \\{0,1\\}\\) | Bernoulli                                                            | Wald tests <br> likelihood ratio tests <br> confidence intervals <br>  odds ratio for one-unit increase in \\(X_j\\) |
+| **Poisson Regression**  | Count \\(Y=0,1,2,\\dots\\) | Poisson                | likelihood ratio tests <br> confidence intervals <br> multiplicative change in expected count for one-unit increase in \\(X_j\\) |
+| **Cox Regression**      | Time-to-event (survival) | Partial likelihood | Standard errors from inverse information<br> score tests <br> confidence intervals<br>hazard ratio for one-unit increase in \\(X_j\\) |
+</div>
+
+
+
+## Example: Gene Expression and regression analysis
+<div style="font-size:0.7em">
+Gene expression varies across patients even when the underlying biological effect is stable.
+
+We model expression as a random draw around an expected value:
+
+$$
+Y_i∣X_i∼N(X_iβ_i,σ2)
+$$
+
+- $X_iβ_i$ : expected expression given covariates  
+- $\sigma^2$ : biological + technical variability  
+- likelihood 
+
+$$P(Y \mid X, \beta, \sigma^2)$$
+</div>
+
+
+## Regression modeling questions
+
+Once a likelihood is identified a fitted model can be used to find the following can be determined:
+
+1. **How precise is my estimate of a drug effect?**  
+2. **Could the observed effect be due to chance?**  
+3. **What range of expression should I expect in a new patient?**  
+
+
+---
+
+## Drug effect on gene expression
+<div style="font-size:0.7em">
+Simulated data:
+
+- One gene
+- Two groups (Control vs Drug)
+- A stable effect with realistic variability
+
+
+</div>
+
+## Drug effect on gene expression
+<div style="font-size:0.7em">
+Simulated data:
+
+
+```{r}
+set.seed(42)
+
+n <- 80
+drug_num <- rep(c(0, 1), each = n / 2)
+
+beta_0 <- 5      # baseline expression
+beta_1 <- 1.2    # drug effect (treated - control)
+sigma  <- 1.0    # biological variability
+
+expression <- beta_0 + beta_1 * drug_num + rnorm(n, 0, sigma)
+
+dat <- data.frame(
+  expression = expression,
+  drug = factor(drug_num, labels = c("Control", "Drug"))
+)
+
+head(dat)
+```
+</div>
+
+---
+
+## Visualizing biological variability
+
+Expression values scatter around the expected mean in each group.
+
+```{r, echo=FALSE}
+boxplot(
+  expression ~ drug,
+  data = dat,
+  col = c("gray85", "lightblue"),
+  ylab = "Gene Expression",
+  main = "Simulated Expression by Treatment"
+)
+stripchart(
+  expression ~ drug,
+  data = dat,
+  vertical = TRUE,
+  method = "jitter",
+  pch = 16,
+  add = TRUE
+)
+```
+
+---
+
+## Fit the regression model
+<div style="font-size:0.7em">
+Fit a linear moodel
+
+```{r}
+fit <- lm(expression ~ drug, data = dat)
+summary(fit)
+```
+</div>
+---
+
+## Fit the regression model
+<div style="font-size:0.7em">
+- primary result: drug effect on gene expression
+  - treated samples show higher gene expression than controls [+1.32 expression units]
+- estimate is tightly constrained by the data - standard error (drug effect): 0.24
+- observed effect of the drug on gene expression indicates true change 
+  - real treatment effect under the model’s probability assumptions: p-value: 5.4 × 10⁻⁷
+</div>
+---
+
+## Question 1: How precise is my estimate?
+<div style="font-size:0.7em">
+
+- confidence interval summarizes precision for the drug effect
+
+```{r}
+confint(fit)
+```
+
+Interpretation for the drug coefficient:
+
+
+- interval width reflects uncertainty driven by $$\sigma^2$$ and sample size  
+</div>
+---
+
+## Question 2: Could the effect be due to chance?
+<div style="font-size:0.7em">
+
+- model evaluates compatibility with a null effect (drug = 0)
+
+```{r}
+summary(fit)$coefficients
+```
+
+Interpretation for the drug treatment:
+
+- **p-value**: p-value: 5.4 × 10⁻⁷
+  - computed from the sampling distribution implied by the Gaussian likelihood 
+  - less than 0.05 likely a true biological effect
+</div>
+---
+
+## Question 3: What range should I expect in a new patient?
+<div style="font-size:0.7em">
+- prediction interval describes plausible outcomes for an individual patient
+
+```{r}
+new_patient <- data.frame(drug = factor("Drug", levels = levels(dat$drug)))
+predict(fit, new_patient, interval = "prediction")
+```
+
+
+- $\hat{\mu}$ (the estimated mean): estimate of gene expression change if a new patient were given the same treatment within a range specified by $\sigma^2$ 
+</div>
+---
+
+
+## Model comparisons
+
+- multiple models are often run to generate estimates
+
+Model comparison formalizes questions like:
+
+- Does adding predictors meaningfully improve our explanation?  
+- Which model is best supported by the observed data?  
+
+
+
+---
+
+## What counts as “a different model”?
+
+Two models differ when they change any of the following:
+
+- Predictors included in the model 
+- The distribution of the outcome (Gaussian vs Bernoulli)  
+- The dependence structure (independent vs random effects)  
+
+---
+
+## Fit vs complexity
+
+- more complex models typically fit the observed data better
+
+- model comparison helps show whether:
+
+  - fit improves when the model captures real structure  
+  - complexity grows when the model has more parameters  
+
+- Model comparison methods reward fit and penalizes unnecessary complexity
+
+---
+
+## Model comparison methods
+<div style="font-size:0.7em">
+- **Akaike Information Criterion [AIC]** and **Bayesian Information Criterion [BIC]** are standard tools for comparing regression models because regression models are likelihood-based statistical models
+- AIC and BIC evaluate the tradeoff between fit and complexity induced by those likelihoods
+- AIC and BIC are used to compare models that are fit to the same outcome on the same likelihood scale
+
+Typical questions include:
+
+  - Does adding a biomarker improve the model?
+  - Is an interaction term supported?
+  - Do molecular covariates add explanatory value beyond clinical ones?
+</div>
+---
+
+## AIC and BIC in Regression Analysis
+<div style="font-size:0.7em">
+- AIC and BIC are model comparison criteria that evaluate entire fitted regression models
+- As a part of regression models, probability models are defined:
+
+$$
+P(Y∣X,θ)
+$$
+- AIC and BIC summarize:
+
+  - How well the regression explains the observed biomedical data (via the likelihood)
+  - How complex the regression is (number of parameters)
+</div>
+---
+
+## AIC and BIC in biomedical regression analysis
+<div style="font-size:0.7em">
+- AIC helps address: Which regression model is expected to predict new biomedical data most accurately?
+  - AIC approximates how close your fitted regression is to the unknown biological data-generating process
+  - Example: improving biomarker-based prediction
+
+- BIC helps determine: given the data and model complexity, which set of evidence is more plausible than the alternatives
+  - BIC helps show that data provide strong enough evidence that an effect improves explanation beyond what would be expected from chance or overfitting
+
+</div>
+---
+
+
+
+## When AIC and BIC agree and disagree
+<div style="font-size:0.7em">
+
+They often agree when:
+
+- a real biological signal is strong and the more complex model improves likelihood substantially
+
+They often disagree when:
+
+- sample size is large (BIC penalizes complexity more strongly)
+
+In biomedical terms:
+
+- **AIC** supports models that generalize well for prediction and risk scoring
+- **BIC** supports models that use as few parameters as necessary to explain the observed biological pattern or trend, without sacrificing explanatory adequacy
+</div>
+---
+
+## AIC and BIC Metrics for Model Comparision
+<div style="font-size:0.7em">
+- ΔAIC and ΔBIC measure how much worse a model is compared to the best model in the set
+- Suppose you fit several models and compute AIC (or BIC) for each, let:
+
+- $AIC_{min}$: smallest AIC among the models [score for selected model]
+- $AIC_{min}$: smallest BIC among the models [score for selected model]
+
+</div>
+---
+
+## AIC and BIC Metrics for Model Comparision
+<div style="font-size:0.5em">
+Score interpretation:
+
+**AIC**
+
+ΔAIC = 0–2
+  - models have essentially equivalent support from the data
+
+ΔAIC = 4–7
+  - considerably less support
+
+ΔAIC > 10
+  - essentially no support relative to the best model
+
+**BIC**
+
+ΔBIC = 0–2
+  - weak evidence against the model
+
+ΔBIC = 2–6
+  - positive evidence against the model
+
+ΔBIC = 6–10
+  - strong evidence against the model
+
+ΔBIC > 10
+  - ery strong evidence against the model
+</div>
+---
+
+## Practical workflow using model comparison
+
+1. Fit a small set of candidate models
+2. Compute AIC and BIC for each
+3. Compare $\Delta$AIC and $\Delta$BIC to identify supported models
+4. Interpret what the selected model implies biologically (which effects are strongly supported)
+
+---
+
+## Simulated biological example
+<div style="font-size:0.6em">
+
+Data [simulated]: gene-expression outcome  measured in patients after treatment
+
+Scientific questions:
+
+- Does the presence of a biomarker improve explanation of gene expression beyond treatment status alone?
+- Is there evidence that treatment effect depends on biomarker level (an interaction)?
+
+
+</div>
+---
+
+## Simulated biological example
+<div style="font-size:0.65em">
+**Models tested [linear models]**:
+
+`Model 1`:
+
+Average gene expression using only treatment status
+
+```r
+m1 <- lm(y ~ treat)
+```
+
+
+`Model 2`:
+
+Determine change in gene expression based on:
+
+treatment status and biomarker level (additive effects)
+
+```r
+m2 <- lm(y ~ treat + biomarker)
+```
+
+
+</div>
+---
+
+## Simulated biological example
+<div style="font-size:0.65em">
+**Models tested [linear models]**:
+
+
+`Model 3`:
+
+Determine change in gene expression based on:
+
+- baseline biomarker effects
+- average treatment effect
+- biomarker-dependent treatment effects
+- model measures interaction effect: does the effect of the treatment depend on the biomarker
+
+```r
+m3 <- lm(y ~ treat * biomarker)
+```
+</div>
+---
+
+## Simulated gene expression dataset
+
+<div style="font-size:0.6em">
+```{r}
+set.seed(29)
+
+n <- 120
+treat <- rbinom(n, 1, 0.5)                 # 0 = control, 1 = drug
+biomarker <- rnorm(n, mean = 0, sd = 1)    # standardized biomarker score
+
+# Data-generating biology:
+# - baseline expression
+# - treatment shifts expression upward
+# - biomarker is associated with expression
+# - treatment works better when biomarker is higher (interaction)
+y <- 10 +
+  0.8 * treat +
+  1.2 * biomarker +
+  0.6 * treat * biomarker +
+  rnorm(n, mean = 0, sd = 1.5)
+
+dat <- data.frame(y, treat = factor(treat, labels = c("Control", "Drug")), biomarker)
+head(dat)
+```
+</div>
+---
+
+## Fit candidate models
+
+```{r}
+m1 <- lm(y ~ treat, data = dat)
+m2 <- lm(y ~ treat + biomarker, data = dat)
+m3 <- lm(y ~ treat * biomarker, data = dat) 
+```
+
+---
+
+## Compute AIC and BIC
+
+```{r}
+ic <- data.frame(
+  model = c("m1: treat", "m2: treat + biomarker", "m3: treat * biomarker"),
+  AIC  = c(AIC(m1), AIC(m2), AIC(m3)),
+  BIC  = c(BIC(m1), BIC(m2), BIC(m3))
+)
+
+ic$DeltaAIC <- ic$AIC - min(ic$AIC)
+ic$DeltaBIC <- ic$BIC - min(ic$BIC)
+
+ic[order(ic$AIC), ]
+```
+
+---
+
+## Model Interpretation
+<div style="font-size:0.7em">
+From the table:
+
+- The **lowest AIC** identifies the model with the best expected predictive support among candidates
+- The **lowest BIC** identifies the most strongly supported parsimonious explanation among candidates
+
+How to choose the best model based on your scientific goal:
+
+- Use **AIC** when your goal is stable predictive performance across new patients
+- Use **BIC** when your goal is given the data you have, which model provides a concise biological explanation with strong support
+
+</div>
+---
+
+## Summary
+
+- Regression models describe how outcomes vary given predictors and each model specifies a conditional distribution
+- model inference [i.e.: standard errors, confidence intervals, hypothesis tests, and prediction intervals] stems from model likelihood 
+- model comparison helps balance fit and complexity
